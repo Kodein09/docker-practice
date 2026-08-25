@@ -1,0 +1,42 @@
+services:
+  backend:
+    build: .
+    ports:
+      - 80:80
+    environment:
+      - DB_USER=${DB_USER:-user}
+      - DB_PASSWORD=${DB_PASS:-password}
+      - DB_NAME=${DB_NAME:-mydb}
+      - DB_HOST=mariadb
+    networks:
+      - app-network
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
+  mariadb:
+    image: mariadb:10.11
+    volumes:
+      - db_data:/var/lib/mysql
+    environment:
+      - MARIADB_ROOT_PASSWORD=root_secret
+      - MARIADB_USER=${DB_USER:-user}
+      - MARIADB_PASSWORD=${DB_PASS:-password}
+      - MARIADB_DATABASE=${DB_NAME:-mydb}
+    networks:
+      - backend
+    healthcheck:
+      retries: 5
+      timeout: 5s
+      test: ["", ""]
+      interval: 5s
+
+  frontend:
+    image: nginx:alpine
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
