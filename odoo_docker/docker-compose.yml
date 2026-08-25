@@ -1,0 +1,50 @@
+services:
+  web:
+    image: odoo:19
+    command: ["odoo", "-i", "./addons/openeducat_erp/openeducat_core", "-d", "odoo"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - HOST=db
+      - USER=${POSTGRES_USER}
+      - PASSWORD_FILE=/run/secrets/postgresql_password
+    ports:
+      - "8069:8069"
+    volumes:
+      - odoo-web-data:/var/lib/odoo
+      - ./addons:/addons
+    networks:
+      - app-net
+    secrets:
+      - postgresql_password
+  
+  db:
+    image: postgres:18-alpine
+    volumes:
+    - odoo-db-data:/var/lib/postgresql/18/docker
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgresql_password
+      - POSTGRES_USER=${POSTGRES_USER}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      retries: 5
+      timeout: 10s
+      interval: 5s
+    networks:
+      - app-net
+    secrets:
+      - postgresql_password
+
+networks:
+  app-net:
+    driver: bridge
+
+volumes:
+  odoo-web-data:
+  odoo-db-data:
+
+secrets:
+  postgresql_password:
+    file: postgresql_password
