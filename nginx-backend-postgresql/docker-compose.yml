@@ -1,0 +1,49 @@
+services:
+  #NGINX
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - frontend
+    depends_on:
+      - backend
+
+  #FASTAPI
+  backend:
+    build: .
+    environment:
+      - DB_PORT=${DB_PORT}
+      - DB_PASS=${DB_PASS}
+      - DB_USER=${DB_USER}
+      - DB_NAME=${DB_NAME}
+    networks:
+      - frontend
+      - backend
+    depends_on:
+      postgresql:
+        condition: service_healthy
+
+  #DATABASE
+  postgresql:
+    image: postgres:latest
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASS}
+      - POSTGRES_DB=${DB_NAME}
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s #How many times check (every 10 sec)
+      timeout: 5s #timed out after 5 sec
+      retries: 5 #5 retries, before give up
+
+  #NETWORKS
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
